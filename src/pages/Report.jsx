@@ -27,7 +27,8 @@ export default function Report() {
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [description, setDescription] = useState('');
-  const [mockLocation, setMockLocation] = useState('');
+  const [actualLocation, setActualLocation] = useState('');
+  const [locationLoading, setLocationLoading] = useState(true);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -35,8 +36,39 @@ export default function Report() {
   }, [user, navigate]);
 
   useEffect(() => {
-    const locs = MOCK_LOCATIONS_FOR_REPORTS;
-    setMockLocation(locs[Math.floor(Math.random() * locs.length)]);
+    if (navigator.geolocation) {
+      setLocationLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+            const data = await res.json();
+            if (data && data.address) {
+              const locality = data.address.suburb || data.address.neighbourhood || data.address.city_district || data.address.village || data.address.town || 'Unknown Area';
+              const city = data.address.city || data.address.state_district || data.address.state || 'Bangalore';
+              setActualLocation(`${locality}, ${city}`);
+            } else {
+              setActualLocation("Unknown location");
+            }
+          } catch (e) {
+            console.error("Geocoding failed", e);
+            setActualLocation("Current Location");
+          }
+          setLocationLoading(false);
+        },
+        (error) => {
+          console.error("Geolocation error", error);
+          setActualLocation("Location blocked/unavailable");
+          setLocationLoading(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      setActualLocation("Geolocation unsupported");
+      setLocationLoading(false);
+    }
   }, []);
 
   const handlePhotoUpload = (e) => {
@@ -70,7 +102,7 @@ export default function Report() {
   const handleSubmit = () => {
     const report = addReport({
       category,
-      location: mockLocation,
+      location: actualLocation || 'Unknown Location',
       description,
       photo: photoPreview || 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&h=200&fit=crop',
     });
@@ -145,7 +177,7 @@ export default function Report() {
           {errors.photo && <p className="form-error" style={{ textAlign: 'center', marginBottom: '12px' }}>{errors.photo}</p>}
           <div className="location-badge">
             <MapPinIcon size={16} color="var(--accent-green)" />
-            <span>Location detected: {mockLocation}</span>
+            <span>{locationLoading ? 'Detecting your location...' : `Location detected: ${actualLocation}`}</span>
           </div>
           <div className="step-buttons">
             <button className="btn-secondary" onClick={prevStep}>Back</button>
@@ -171,7 +203,7 @@ export default function Report() {
             </div>
             <div className="summary-row summary-loc">
               <MapPinIcon size={14} color="var(--text-secondary)" />
-              <span>{mockLocation}</span>
+              <span>{actualLocation}</span>
             </div>
             {photoPreview && (
               <img src={photoPreview} alt="Evidence" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '8px', marginTop: '8px' }} />
