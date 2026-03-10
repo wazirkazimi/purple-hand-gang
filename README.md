@@ -14,6 +14,16 @@
 
 <br />
 
+## 🌐 Live Preview
+
+**Try the app now on Vercel:** [https://purple-hand-gang.vercel.app](https://purple-hand-gang.vercel.app)
+
+**Demo Credentials:**
+- **Email:** `demo@test.com`
+- **Password:** `0123456789`
+
+<br />
+
 ## 📖 About The Project
 
 **Namma Suraksha** is a context-aware, mobile-first web application designed specifically for the citizens of Bangalore. It serves as a rapid civic and personal safety tool, enabling users to instantly alert authorities in an emergency and report local civic/safety issues directly from their phone.
