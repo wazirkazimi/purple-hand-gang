@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://ui-avatars.com/api/?name=Purple+Hand+Gang&background=1e1b4b&color=fff&size=200&rounded=true" alt="Purple Hand Gang Logo" width="150" height="150" />
+  <img src="./image.png" alt="Purple Hand Gang Logo" width="150" height="150" />
 
   <h1>🚨 Namma Suraksha 🚨</h1>
   <p><em>ನಮ್ಮ ಸುರಕ್ಷಾ — Our Safety, Our City</em></p>
