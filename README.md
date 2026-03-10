@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./image.png" alt="Purple Hand Gang Logo" width="150" height="150" /> <br> <br> <br>
+  <img src="./image.png" alt="Purple Hand Gang Logo" width="150" height="150" style="border-radius: 50%;" /> <br> <br> <br>
   <img src="./Bangalore.jpg" alt="Purple Hand Gang Logo" width="1550" height="1000" />
 
   <h1>🚨 Namma Suraksha 🚨</h1>
