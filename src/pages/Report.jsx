@@ -2,6 +2,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { CATEGORIES, MOCK_LOCATIONS_FOR_REPORTS } from '../data/mockData';
+import {
+  ClipboardIcon, MapPinIcon, ArrowRightIcon, CheckCircleIcon, UploadIcon,
+  CarIcon, AngryIcon, ConstructionIcon, TrashIcon, PawIcon, LandmarkIcon, ScaleIcon
+} from '../components/Icons';
+
+const CATEGORY_ICONS = {
+  traffic: CarIcon,
+  road_rage: AngryIcon,
+  road_block: ConstructionIcon,
+  civic: TrashIcon,
+  animals: PawIcon,
+  corruption: LandmarkIcon,
+  other: ScaleIcon,
+};
 
 export default function Report() {
   const navigate = useNavigate();
@@ -17,13 +31,10 @@ export default function Report() {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth', { state: { redirect: '/report' } });
-    }
+    if (!user) navigate('/auth', { state: { redirect: '/report' } });
   }, [user, navigate]);
 
   useEffect(() => {
-    // Assign a random mock location
     const locs = MOCK_LOCATIONS_FOR_REPORTS;
     setMockLocation(locs[Math.floor(Math.random() * locs.length)]);
   }, []);
@@ -53,18 +64,10 @@ export default function Report() {
     return Object.keys(errs).length === 0;
   };
 
-  const nextStep = () => {
-    if (validateStep()) {
-      setStep(prev => prev + 1);
-    }
-  };
-
-  const prevStep = () => {
-    setStep(prev => Math.max(1, prev - 1));
-  };
+  const nextStep = () => { if (validateStep()) setStep(prev => prev + 1); };
+  const prevStep = () => setStep(prev => Math.max(1, prev - 1));
 
   const handleSubmit = () => {
-    const catData = CATEGORIES.find(c => c.id === category);
     const report = addReport({
       category,
       location: mockLocation,
@@ -77,146 +80,111 @@ export default function Report() {
   if (!user) return null;
 
   return (
-    <div className="report-page">
-      <h2>📋 Report an Issue</h2>
+    <div className="report-page animate-fade-in">
+      <div className="page-header">
+        <ClipboardIcon size={22} color="var(--accent-red)" />
+        <h2>Report an Issue</h2>
+      </div>
       <p className="report-subtitle">Help make Bangalore safer</p>
 
       {/* Step Indicator */}
       <div className="step-indicator">
         <div className={`step-dot ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
-          {step > 1 ? '✓' : '1'}
+          {step > 1 ? <CheckCircleIcon size={14} color="white" /> : '1'}
         </div>
         <div className={`step-line ${step > 1 ? 'completed' : ''}`}></div>
         <div className={`step-dot ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
-          {step > 2 ? '✓' : '2'}
+          {step > 2 ? <CheckCircleIcon size={14} color="white" /> : '2'}
         </div>
         <div className={`step-line ${step > 2 ? 'completed' : ''}`}></div>
         <div className={`step-dot ${step >= 3 ? 'active' : ''}`}>3</div>
       </div>
 
-      {/* Step 1: Category */}
+      {/* Step 1 */}
       {step === 1 && (
-        <>
-          <h3 style={{ fontSize: '1rem', marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            Select Category
-          </h3>
+        <div className="animate-slide-up">
+          <h3 className="step-title">Select Category</h3>
           <div className="category-grid">
-            {CATEGORIES.map((cat) => (
-              <div
-                key={cat.id}
-                className={`category-card ${category === cat.id ? 'selected' : ''}`}
-                onClick={() => {
-                  setCategory(cat.id);
-                  setErrors(prev => ({ ...prev, category: '' }));
-                }}
-              >
-                <span className="cat-icon">{cat.icon}</span>
-                <span className="cat-label">{cat.label}</span>
-              </div>
-            ))}
+            {CATEGORIES.map((cat) => {
+              const IconComp = CATEGORY_ICONS[cat.id];
+              return (
+                <div key={cat.id} className={`category-card ${category === cat.id ? 'selected' : ''}`}
+                  onClick={() => { setCategory(cat.id); setErrors({}); }}>
+                  <span className="cat-icon-wrap">
+                    <IconComp size={28} color={category === cat.id ? 'var(--accent-red)' : 'var(--text-secondary)'} />
+                  </span>
+                  <span className="cat-label">{cat.label}</span>
+                </div>
+              );
+            })}
           </div>
           {errors.category && <p className="form-error" style={{ textAlign: 'center', marginBottom: '12px' }}>{errors.category}</p>}
           <button className="btn-primary" onClick={nextStep}>
-            Continue →
+            <span>Continue</span>
+            <ArrowRightIcon size={16} color="white" />
           </button>
-        </>
+        </div>
       )}
 
-      {/* Step 2: Photo Upload */}
+      {/* Step 2 */}
       {step === 2 && (
-        <>
-          <h3 style={{ fontSize: '1rem', marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            Upload Photo Evidence
-          </h3>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handlePhotoUpload}
-            style={{ display: 'none' }}
-          />
-
-          <div
-            className={`upload-area ${photoPreview ? 'has-image' : ''}`}
-            onClick={() => fileInputRef.current?.click()}
-          >
+        <div className="animate-slide-up">
+          <h3 className="step-title">Upload Photo Evidence</h3>
+          <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+          <div className={`upload-area ${photoPreview ? 'has-image' : ''}`} onClick={() => fileInputRef.current?.click()}>
             {photoPreview ? (
               <img src={photoPreview} alt="Upload preview" className="upload-preview" />
             ) : (
               <>
-                <div className="upload-icon">📸</div>
+                <UploadIcon size={36} color="var(--text-muted)" />
                 <p className="upload-text">Tap to upload a photo</p>
                 <p className="upload-hint">Photo will be geo-tagged automatically</p>
               </>
             )}
           </div>
-
           {errors.photo && <p className="form-error" style={{ textAlign: 'center', marginBottom: '12px' }}>{errors.photo}</p>}
-
           <div className="location-badge">
-            📍 Location detected: {mockLocation}
+            <MapPinIcon size={16} color="var(--accent-green)" />
+            <span>Location detected: {mockLocation}</span>
           </div>
-
           <div className="step-buttons">
-            <button className="btn-secondary" onClick={prevStep}>← Back</button>
-            <button className="btn-primary" onClick={nextStep}>Continue →</button>
+            <button className="btn-secondary" onClick={prevStep}>Back</button>
+            <button className="btn-primary" onClick={nextStep}>
+              <span>Continue</span>
+              <ArrowRightIcon size={14} color="white" />
+            </button>
           </div>
-        </>
+        </div>
       )}
 
-      {/* Step 3: Description */}
+      {/* Step 3 */}
       {step === 3 && (
-        <>
-          <h3 style={{ fontSize: '1rem', marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            Add Description (Optional)
-          </h3>
-
-          <textarea
-            className="description-input"
-            placeholder="Describe the issue briefly..."
-            maxLength={200}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
+        <div className="animate-slide-up">
+          <h3 className="step-title">Add Description (Optional)</h3>
+          <textarea className="description-input" placeholder="Describe the issue briefly..." maxLength={200} value={description} onChange={(e) => setDescription(e.target.value)} />
           <p className="char-count">{description.length}/200</p>
-
-          {/* Summary */}
-          <div style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-md)',
-            padding: '16px',
-            marginBottom: '20px',
-          }}>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Report Summary</p>
-            <p style={{ fontSize: '0.85rem' }}>
-              {CATEGORIES.find(c => c.id === category)?.icon} {CATEGORIES.find(c => c.id === category)?.label}
-            </p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              📍 {mockLocation}
-            </p>
+          <div className="report-summary-card">
+            <p className="summary-label">Report Summary</p>
+            <div className="summary-row">
+              {(() => { const IC = CATEGORY_ICONS[category]; return <IC size={16} color="var(--accent-red)" />; })()}
+              <span>{CATEGORIES.find(c => c.id === category)?.label}</span>
+            </div>
+            <div className="summary-row summary-loc">
+              <MapPinIcon size={14} color="var(--text-secondary)" />
+              <span>{mockLocation}</span>
+            </div>
             {photoPreview && (
-              <img
-                src={photoPreview}
-                alt="Evidence"
-                style={{
-                  width: '60px',
-                  height: '60px',
-                  objectFit: 'cover',
-                  borderRadius: '8px',
-                  marginTop: '8px'
-                }}
-              />
+              <img src={photoPreview} alt="Evidence" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '8px', marginTop: '8px' }} />
             )}
           </div>
-
           <div className="step-buttons">
-            <button className="btn-secondary" onClick={prevStep}>← Back</button>
-            <button className="btn-primary" onClick={handleSubmit}>Submit Report ✓</button>
+            <button className="btn-secondary" onClick={prevStep}>Back</button>
+            <button className="btn-primary" onClick={handleSubmit}>
+              <span>Submit Report</span>
+              <CheckCircleIcon size={16} color="white" />
+            </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

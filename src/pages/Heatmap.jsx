@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BANGALORE_LOCATIONS, SEVERITY_COLORS, SEVERITY_LABELS } from '../data/mockData';
+import { MapIcon } from '../components/Icons';
 
-// We'll dynamically import Leaflet to handle SSR and loading
-let L = null;
 let MapContainer = null;
 let TileLayer = null;
 let CircleMarker = null;
@@ -12,12 +12,10 @@ function LeafletMap({ locations }) {
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
-    // Dynamic import of react-leaflet
     Promise.all([
       import('leaflet'),
       import('react-leaflet'),
-    ]).then(([leafletModule, reactLeafletModule]) => {
-      L = leafletModule.default;
+    ]).then(([, reactLeafletModule]) => {
       MapContainer = reactLeafletModule.MapContainer;
       TileLayer = reactLeafletModule.TileLayer;
       CircleMarker = reactLeafletModule.CircleMarker;
@@ -28,35 +26,17 @@ function LeafletMap({ locations }) {
 
   if (!mapReady) {
     return (
-      <div style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#0d1117',
-        color: 'var(--text-muted)',
-        fontSize: '0.9rem',
-      }}>
-        Loading map...
+      <div className="map-loading">
+        <MapIcon size={20} color="var(--text-muted)" />
+        <span>Loading map...</span>
       </div>
     );
   }
 
-  const severityRadius = {
-    safe: 12,
-    moderate: 16,
-    concerning: 20,
-    danger: 24,
-  };
+  const severityRadius = { safe: 12, moderate: 16, concerning: 20, danger: 24 };
 
   return (
-    <MapContainer
-      center={[12.9716, 77.5946]}
-      zoom={12}
-      style={{ height: '100%', width: '100%' }}
-      zoomControl={false}
-    >
+    <MapContainer center={[12.9716, 77.5946]} zoom={12} style={{ height: '100%', width: '100%' }} zoomControl={false}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -76,16 +56,9 @@ function LeafletMap({ locations }) {
         >
           <Popup className="custom-popup">
             <div className="popup-content">
-              <p className="popup-title">📍 {loc.name}</p>
-              <p className="popup-count">⚠️ {loc.incidents} incidents reported in last 7 days</p>
-              <span
-                className="popup-severity"
-                style={{
-                  background: `${SEVERITY_COLORS[loc.severity]}20`,
-                  color: SEVERITY_COLORS[loc.severity],
-                  border: `1px solid ${SEVERITY_COLORS[loc.severity]}40`,
-                }}
-              >
+              <p className="popup-title">{loc.name}</p>
+              <p className="popup-count">{loc.incidents} incidents in last 7 days</p>
+              <span className="popup-severity" style={{ background: `${SEVERITY_COLORS[loc.severity]}20`, color: SEVERITY_COLORS[loc.severity], border: `1px solid ${SEVERITY_COLORS[loc.severity]}40` }}>
                 {SEVERITY_LABELS[loc.severity]}
               </span>
             </div>
@@ -97,12 +70,12 @@ function LeafletMap({ locations }) {
 }
 
 const FILTERS = [
-  { id: 'all', label: '🔍 All' },
-  { id: 'traffic', label: '🚗 Traffic' },
-  { id: 'road_rage', label: '😤 Road Rage' },
-  { id: 'civic', label: '🗑️ Civic' },
-  { id: 'road_block', label: '🚧 Road Block' },
-  { id: 'animals', label: '🐄 Animals' },
+  { id: 'all', label: 'All' },
+  { id: 'traffic', label: 'Traffic' },
+  { id: 'road_rage', label: 'Road Rage' },
+  { id: 'civic', label: 'Civic' },
+  { id: 'road_block', label: 'Road Block' },
+  { id: 'animals', label: 'Animals' },
 ];
 
 export default function Heatmap() {
@@ -113,45 +86,31 @@ export default function Heatmap() {
     : BANGALORE_LOCATIONS.filter(loc => loc.category === filter);
 
   return (
-    <div className="heatmap-page">
-      <h2>🗺️ Safety Heatmap</h2>
+    <div className="heatmap-page animate-fade-in">
+      <div className="page-header">
+        <MapIcon size={22} color="var(--accent-red)" />
+        <h2>Safety Heatmap</h2>
+      </div>
 
-      {/* Filter Chips */}
       <div className="filter-chips">
         {FILTERS.map((f) => (
-          <button
-            key={f.id}
-            className={`filter-chip ${filter === f.id ? 'active' : ''}`}
-            onClick={() => setFilter(f.id)}
-          >
+          <button key={f.id} className={`filter-chip ${filter === f.id ? 'active' : ''}`} onClick={() => setFilter(f.id)}>
             {f.label}
           </button>
         ))}
       </div>
 
-      {/* Map */}
       <div className="map-container">
         <LeafletMap locations={filteredLocations} />
       </div>
 
-      {/* Legend */}
       <div className="heatmap-legend">
-        <div className="legend-item">
-          <div className="legend-dot" style={{ background: SEVERITY_COLORS.safe }}></div>
-          <span>Safe</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-dot" style={{ background: SEVERITY_COLORS.moderate }}></div>
-          <span>Moderate</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-dot" style={{ background: SEVERITY_COLORS.concerning }}></div>
-          <span>Concerning</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-dot" style={{ background: SEVERITY_COLORS.danger }}></div>
-          <span>Danger</span>
-        </div>
+        {Object.entries(SEVERITY_COLORS).map(([key, color]) => (
+          <div key={key} className="legend-item">
+            <div className="legend-dot" style={{ background: color }}></div>
+            <span>{SEVERITY_LABELS[key]}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

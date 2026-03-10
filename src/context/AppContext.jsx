@@ -64,7 +64,7 @@ export function AppProvider({ children }) {
     return { success: false, error: 'Invalid credentials' };
   };
 
-  const signup = (name, email, phone, password) => {
+  const signup = (name, email, phone, password, ecName, ecPhone) => {
     const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.users) || '[]');
     if (users.find(u => u.email === email)) {
       return { success: false, error: 'Email already registered' };
@@ -73,6 +73,14 @@ export function AppProvider({ children }) {
     localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(users));
     const userData = { name, email, phone };
     setUser(userData);
+
+    // Set the initial emergency contact for the new user
+    if (ecName && ecPhone) {
+      const contacts = [{ id: Date.now(), name: ecName, phone: ecPhone }];
+      setEmergencyContacts(contacts);
+      localStorage.setItem(STORAGE_KEYS.contacts, JSON.stringify(contacts));
+    }
+
     return { success: true };
   };
 

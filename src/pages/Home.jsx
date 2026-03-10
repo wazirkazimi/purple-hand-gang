@@ -1,6 +1,8 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { BANGALORE_LOCATIONS, SEVERITY_COLORS, SEVERITY_LABELS } from '../data/mockData';
+import { ClipboardIcon, MapIcon, ChevronRightIcon, InfoIcon, ShieldIcon, AlertTriangleIcon, MapPinIcon, PhoneIcon } from '../components/Icons';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -8,7 +10,64 @@ export default function Home() {
   const [holding, setHolding] = useState(false);
   const [progress, setProgress] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+  const [leafletModules, setLeafletModules] = useState(null);
+
+  const [currentPos, setCurrentPos] = useState([12.9352, 77.6245]);
+  const [locationName, setLocationName] = useState('Koramangala, Bangalore');
+  const [locationLoading, setLocationLoading] = useState(false);
+
   const holdTimer = useRef(null);
+
+  // Lazy load leaflet for the home map
+  useEffect(() => {
+    Promise.all([
+      import('leaflet'),
+      import('react-leaflet'),
+    ]).then(([, reactLeaflet]) => {
+      setLeafletModules({
+        L: window.L, // Leaflet is available globally when imported this way typically, but we can also use require
+        MapContainer: reactLeaflet.MapContainer,
+        TileLayer: reactLeaflet.TileLayer,
+        CircleMarker: reactLeaflet.CircleMarker,
+        Marker: reactLeaflet.Marker,
+        Popup: reactLeaflet.Popup
+      });
+      setMapReady(true);
+    });
+
+    // Request actual user location
+    if (navigator.geolocation) {
+      setLocationLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setCurrentPos([lat, lng]);
+
+          try {
+            // Reverse geocode to get a readable place name using free Nominatim API
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+            const data = await res.json();
+            if (data && data.address) {
+              const locality = data.address.suburb || data.address.neighbourhood || data.address.city_district || data.address.village || data.address.town || 'Unknown Area';
+              const city = data.address.city || data.address.state_district || data.address.state || 'Bangalore';
+              setLocationName(`${locality}, ${city}`);
+            }
+          } catch (e) {
+            console.error("Geocoding failed", e);
+            setLocationName("Current Location");
+          }
+          setLocationLoading(false);
+        },
+        (error) => {
+          console.error("Geolocation error", error);
+          setLocationLoading(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+  }, []);
 
   const startHold = useCallback(() => {
     setHolding(true);
@@ -38,26 +97,31 @@ export default function Home() {
     }
   };
 
+  const severityRadius = { safe: 12, moderate: 16, concerning: 20, danger: 24 };
+
   return (
     <>
       {/* SOS Overlay */}
       {showOverlay && (
         <div className="sos-overlay">
-          <div className="alert-icon">🚨</div>
+          <div className="overlay-pulse-bg"></div>
+          <div className="alert-icon-wrap">
+            <AlertTriangleIcon size={48} color="#E63946" />
+          </div>
           <h2>Alert Sent!</h2>
           <p>Help is on the way. Stay safe.</p>
-          <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
-            📍 Location shared with nearest authorities
+          <p className="overlay-location-text">
+            <MapPinIcon size={14} color="currentColor" />
+            Location shared with nearest authorities
           </p>
 
-          {emergencyContacts.length > 0 && (
+          {user && emergencyContacts.length > 0 && (
             <div className="emergency-contacts-list">
-              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginBottom: '6px' }}>
-                Emergency contacts notified:
-              </p>
+              <p className="ec-label">Emergency contacts notified:</p>
               {emergencyContacts.map(contact => (
                 <div key={contact.id} className="emergency-contact-card">
-                  {contact.name} — {contact.phone}
+                  <PhoneIcon size={14} color="currentColor" />
+                  <span>{contact.name}: {contact.phone}</span>
                 </div>
               ))}
             </div>
@@ -67,21 +131,21 @@ export default function Home() {
             className="btn-close-overlay"
             onClick={() => setShowOverlay(false)}
           >
-            I'm Safe — Close
+            <ShieldIcon size={18} color="white" />
+            <span>I'm Safe, Close</span>
           </button>
         </div>
       )}
 
-      {/* Hero — Kannada Title */}
+      {/* Hero */}
       <section className="hero-section">
-        <h2 className="hero-kannada">ನಮ್ಮ ಸುರಕ್ಷಾ</h2>
-        <p className="hero-tagline">Our Safety, Our City</p>
+        <h2 className="hero-kannada animate-fade-up">ನಮ್ಮ ಸುರಕ್ಷಾ</h2>
+        <p className="hero-tagline animate-fade-up-delay">Our Safety, Our City</p>
       </section>
 
-      {/* SOS Button Section */}
+      {/* SOS Button */}
       <section className="sos-section">
         <div className="sos-wrapper">
-          {/* Pulsing rings */}
           <div className="sos-ring"></div>
           <div className="sos-ring"></div>
           <div className="sos-ring"></div>
@@ -94,51 +158,137 @@ export default function Home() {
             onTouchStart={(e) => { e.preventDefault(); startHold(); }}
             onTouchEnd={endHold}
             onTouchCancel={endHold}
-            aria-label="SOS Emergency Button - Press and hold for 2 seconds"
+            aria-label="SOS Emergency Button"
           >
-            {/* Progress ring */}
             <svg className={`sos-progress-ring ${progress ? 'active' : ''}`} viewBox="0 0 200 200">
               <circle cx="100" cy="100" r="90" />
             </svg>
-
-            {/* Star/Asterisk icon */}
-            <div className="sos-star">
-              <svg viewBox="0 0 48 48" fill="white" width="48" height="48">
-                <path d="M24 2 L27 17.5 L42 10 L32 22 L46 24 L32 26 L42 38 L27 30.5 L24 46 L21 30.5 L6 38 L16 26 L2 24 L16 22 L6 10 L21 17.5 Z"/>
-              </svg>
-            </div>
-            <span className="sos-main-text">TAP & HOLD FOR</span>
-            <span className="sos-sub-text">EMERGENCY</span>
+            <div className="sos-inner-glow"></div>
+            <span className="sos-main-label">TAP & HOLD FOR</span>
+            <span className="sos-emergency-text">SOS</span>
           </button>
         </div>
 
         <div className="sos-hint-row">
-          <span className="sos-hint-icon">ℹ️</span>
+          <InfoIcon size={14} color="var(--accent-red)" />
           <span className="sos-hint">Hold for 2 seconds to alert authorities</span>
         </div>
       </section>
 
       {/* CTA Cards */}
-      <section className="cta-section">
+      <section className="cta-section animate-slide-up">
         <div className="cta-card" onClick={handleReportClick}>
           <div className="cta-left">
-            <div className="cta-icon-box cta-icon-red">📋</div>
+            <div className="cta-icon-box cta-icon-red">
+              <ClipboardIcon size={20} color="var(--accent-red)" />
+            </div>
             <div className="cta-text">
               <span className="cta-label">Report an Issue</span>
               <span className="cta-sub">Harassment, lighting, or safety concerns</span>
             </div>
           </div>
-          <span className="cta-arrow">›</span>
+          <ChevronRightIcon size={20} color="var(--text-muted)" className="cta-arrow-icon" />
         </div>
         <div className="cta-card" onClick={() => navigate('/heatmap')}>
           <div className="cta-left">
-            <div className="cta-icon-box cta-icon-blue">🗺️</div>
+            <div className="cta-icon-box cta-icon-blue">
+              <MapIcon size={20} color="var(--accent-blue)" />
+            </div>
             <div className="cta-text">
               <span className="cta-label">Safety Heatmap</span>
               <span className="cta-sub">View real-time safety zones in Bangalore</span>
             </div>
           </div>
-          <span className="cta-arrow">›</span>
+          <ChevronRightIcon size={20} color="var(--text-muted)" className="cta-arrow-icon" />
+        </div>
+      </section>
+
+      {/* Location Map Section */}
+      <section className="home-map-section">
+        <div className="home-map-container">
+          {mapReady && leafletModules ? (
+            <leafletModules.MapContainer
+              key={`map-${currentPos[0]}-${currentPos[1]}`}
+              center={currentPos}
+              zoom={14}
+              style={{ height: '100%', width: '100%' }}
+              zoomControl={false}
+              dragging={false}
+              scrollWheelZoom={false}
+              doubleClickZoom={false}
+              touchZoom={false}
+              attributionControl={false}
+            >
+              <leafletModules.TileLayer
+                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              />
+
+              {/* User Live Location Pin */}
+              {leafletModules.L && (
+                <leafletModules.Marker
+                  position={currentPos}
+                  icon={
+                    new leafletModules.L.divIcon({
+                      className: 'user-live-pin',
+                      html: '<div class="pin-bounce"><div class="pin-pulse"></div></div>',
+                      iconSize: [24, 24],
+                      iconAnchor: [12, 12]
+                    })
+                  }
+                >
+                  <leafletModules.Popup className="custom-popup">
+                    <div className="popup-content">
+                      <p className="popup-title">You are here</p>
+                    </div>
+                  </leafletModules.Popup>
+                </leafletModules.Marker>
+              )}
+
+              {BANGALORE_LOCATIONS.map((loc, idx) => (
+                <leafletModules.CircleMarker
+                  key={idx}
+                  center={[loc.lat, loc.lng]}
+                  radius={severityRadius[loc.severity]}
+                  pathOptions={{
+                    color: SEVERITY_COLORS[loc.severity],
+                    fillColor: SEVERITY_COLORS[loc.severity],
+                    fillOpacity: 0.35,
+                    weight: 2,
+                    opacity: 0.8,
+                  }}
+                >
+                  <leafletModules.Popup className="custom-popup">
+                    <div className="popup-content">
+                      <p className="popup-title">{loc.name}</p>
+                      <p className="popup-count">{loc.incidents} incidents in last 7 days</p>
+                      <span className="popup-severity" style={{ background: `${SEVERITY_COLORS[loc.severity]}20`, color: SEVERITY_COLORS[loc.severity], border: `1px solid ${SEVERITY_COLORS[loc.severity]}40` }}>
+                        {SEVERITY_LABELS[loc.severity]}
+                      </span>
+                    </div>
+                  </leafletModules.Popup>
+                </leafletModules.CircleMarker>
+              ))}
+            </leafletModules.MapContainer>
+          ) : (
+            <div className="map-loading">
+              <MapIcon size={20} color="var(--text-muted)" />
+              <span>Loading map...</span>
+            </div>
+          )}
+        </div>
+        <div className="home-map-info">
+          <div className="home-map-location">
+            <span className="home-map-label">
+              {locationLoading ? 'LOCATING...' : 'CURRENT LOCATION'}
+            </span>
+            <span className="home-map-place">
+              {locationLoading ? 'Finding your area...' : locationName}
+            </span>
+          </div>
+          <div className="home-map-badge">
+            <span className="secure-dot"></span>
+            <span>SECURE ZONE</span>
+          </div>
         </div>
       </section>
     </>

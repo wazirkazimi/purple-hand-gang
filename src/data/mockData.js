@@ -31,6 +31,9 @@ export const BANGALORE_LOCATIONS = [
   { name: 'Peenya', lat: 13.0280, lng: 77.5157, severity: 'concerning', incidents: 11, category: 'road_block' },
   { name: 'Bellandur', lat: 12.9260, lng: 77.6762, severity: 'moderate', incidents: 8, category: 'civic' },
   { name: 'Sarjapur Road', lat: 12.9107, lng: 77.6843, severity: 'concerning', incidents: 12, category: 'traffic' },
+  { name: 'Kumaraswamy Layout', lat: 12.9060, lng: 77.5615, severity: 'danger', incidents: 18, category: 'traffic' },
+  { name: 'Padmanabhanagar', lat: 12.9182, lng: 77.5577, severity: 'concerning', incidents: 12, category: 'civic' },
+  { name: 'ISRO Layout', lat: 12.8988, lng: 77.5552, severity: 'moderate', incidents: 7, category: 'road_block' },
 ];
 
 export const SEVERITY_COLORS = {
